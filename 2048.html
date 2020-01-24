@@ -1,0 +1,190 @@
+<html>
+  <head>
+    <title>2048</title>
+    <script>
+var wid=4, hei=4, score=0, alive=1;
+var board=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+var tiles=[[1,2,3,4],[1,2,3,4],[1,2,3,4],[1,2,3,4]]; //html elements
+var validMoves;
+function initialize(){ // body onload
+  var str='';
+  for(var i=0;i<hei;i++) for(var j=0;j<wid;j++){
+    str+='<div class="cell s0" id="c-'+(i+'-'+j)+'" style="top:'+(100*i+10)+'px; left:'+(100*j+10)+'px;"></div>\n';
+  }
+  document.getElementById("game-div").innerHTML=str;
+  board=new Array(hei);
+  tiles=new Array(hei);
+  for(var i=0;i<hei;i++){
+    board[i]=new Array(wid);
+    tiles[i]=new Array(wid);
+    for(var j=0;j<wid;j++){
+      tiles[i][j] = document.getElementById("c-" + i + "-" + j);
+      board[i][j]=0;
+    }
+  }
+  addRandomTile();
+  calculateValidMoves();
+}
+
+function updateTile(x,y){
+  var value=board[y][x];
+  var name = value>0 ? value : "";
+  if(name != tiles[y][x].innerText){
+    tiles[y][x].innerText = name;
+    tiles[y][x].className = "cell s"+value;
+  }
+}
+
+function updateAllTiles(){
+  for(var i=0; i<wid; i++) for(var j=0; j<hei; j++) updateTile(i,j);
+  document.getElementById("score").innerText=score;
+}
+
+function addRandomTile(){
+  var emptyTiles=[];
+  for(var i=0;i<hei;i++)for(var j=0;j<wid;j++) if(board[i][j]==0) emptyTiles.push([i,j]);
+  if(emptyTiles.length>0){
+    var t=Math.floor(emptyTiles.length*Math.random());
+    var y=emptyTiles[t][0],x=emptyTiles[t][1];
+    board[y][x]=Math.random()<0.9 ? 2 : 4;
+    updateTile(x,y);
+    return 0;
+  }
+  else return -1;
+}
+
+function calculateValidMoves(){
+  var i,j, u=0, d=0, l=0, r=0;
+  for(i=0;i<hei;i++) for(j=1;j<wid;j++)    if( board[i][j] != 0 && (board[i][j-1]==0 || board[i][j]==board[i][j-1]) ) { l=1; i=hei; j=wid; }
+  for(i=0;i<hei;i++) for(j=0;j<wid-1;j++)  if( board[i][j] != 0 && (board[i][j+1]==0 || board[i][j]==board[i][j+1]) ) { r=1; i=hei; j=wid; }
+
+  for(i=1;i<hei;i++)   for(j=0;j<wid;j++)    if( board[i][j] != 0 && (board[i-1][j]==0 || board[i][j]==board[i-1][j]) ) { u=1; i=hei; j=wid; }
+  for(i=0;i<hei-1;i++) for(j=0;j<wid;j++)    if( board[i][j] != 0 && (board[i+1][j]==0 || board[i][j]==board[i+1][j]) ) { d=1; i=hei; j=wid; }
+  validMoves = {u:u,d:d,l:l,r:r};
+}
+
+function shift(direction){ // u d l r  up, down, left, right
+  var i,j, free, last, current, dScore=0; //freeLocation, lastTileValue, currentTileValue
+  if(validMoves[direction] != 1)  return -1;
+
+  if(direction=='u'){
+    for(i=0; i<wid; i++){
+      free=-1; last=0;
+      for(j=0; j<hei; j++){
+        current = board[j][i];
+        if(current == 0) continue;
+        if(current == last){  last=0;      current*=2;    dScore += current;  }
+        else{                 last=current;   free++;     }
+        board[j][i]=0;
+        board[free][i] = current;
+      }
+    }
+  }
+
+  else if(direction=='d'){
+    for(i=0; i<wid; i++){
+      free=hei; last=0;
+      for(j=hei-1; j>=0; j--){
+        current = board[j][i];
+        if(current == 0) continue;
+        if(current == last){  last=0;      current*=2;    dScore += current;  }
+        else{                 last=current;   free--;     }
+        board[j][i]=0;
+        board[free][i] = current;
+      }
+    }
+  }
+
+  else if(direction=='l'){
+    for(j=0; j<hei; j++){
+      free=-1; last=0;
+      for(i=0; i<wid; i++){
+        current = board[j][i];
+        if(current == 0) continue;
+        if(current == last){  last=0;      current*=2;    dScore += current;  }
+        else{                 last=current;   free++;     }
+        board[j][i]=0;
+        board[j][free] = current;
+      }
+    }
+  }
+  else if(direction=='r'){
+    for(j=0; j<hei; j++){
+      free=wid; last=0;
+      for(i=wid-1; i>=0; i--){
+        current = board[j][i];
+        if(current == 0) continue;
+        if(current == last){  last=0;      current*=2;    dScore += current;  }
+        else{                 last=current;   free--;     }
+        board[j][i]=0;
+        board[j][free] = current;
+      }
+    }
+  }
+  score += dScore;
+  updateAllTiles();
+  return dScore;
+}
+
+function keyEvent(e){
+  if(alive==0) return -1;
+  //console.log(e.keyCode);
+  var ret=-1;
+  if(e.keyCode==38 || e.keyCode==87)      ret=shift('u');
+  else if(e.keyCode==40 || e.keyCode==83) ret=shift('d');
+  else if(e.keyCode==37 || e.keyCode==65) ret=shift('l');
+  else if(e.keyCode==39 || e.keyCode==68) ret=shift('r');
+
+  if(ret>=0){
+    addRandomTile();
+    calculateValidMoves();
+    if(validMoves.u + validMoves.d + validMoves.l + validMoves.r == 0){
+      alive=0;
+      alert("DEAD");
+    }
+  }
+}
+    </script>
+    <style>
+
+div.container{
+  width: 410px;
+  height: 410px;
+  background-color: #bbbbbb;
+  transform-origin: top left;
+  transform: scale(1);
+}
+
+div.cell{
+  width: 90px;
+  height: 90px;
+  line-height: 90px;
+  text-align: center;
+  position: fixed;
+  font-size: 32px;
+  background-color: #ffffff;
+}
+
+div.s0{    font-size: 50px; background-color: #dddddd;            }
+div.s2{    font-size: 50px; background-color: hsl(0,  70%,50%);   }
+div.s4{    font-size: 50px; background-color: hsl(40, 70%,50%);   }
+div.s8{    font-size: 50px; background-color: hsl(80, 70%,50%);   }
+div.s16{   font-size: 50px; background-color: hsl(120,70%,50%);   }
+div.s32{   font-size: 50px; background-color: hsl(160,70%,50%);   }
+div.s64{   font-size: 50px; background-color: hsl(200,70%,50%);   }
+div.s128{  font-size: 45px; background-color: hsl(240,70%,50%);   }
+div.s256{  font-size: 45px; background-color: hsl(280,70%,50%);   }
+div.s512{  font-size: 45px; background-color: hsl(320,70%,50%);   }
+div.s1024{ font-size: 35px; background-color: hsl(0,  100%,65%);  }
+div.s2048{ font-size: 35px; background-color: hsl(90, 100%,65%);  }
+div.s4096{ font-size: 35px; background-color: hsl(180,100%,65%);  }
+div.s8192{ font-size: 35px; background-color: hsl(270,100%,65%);  }
+
+    </style>
+  </head>
+  <body onload="initialize();" onkeydown="keyEvent(event);" style="text-align:-webkit-center;">
+    <div id="score" style="font-size: 60px;">0</div>
+    <div class="container" id="game-div" style="">
+    </div>
+  </body>
+</html>
